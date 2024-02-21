@@ -1,0 +1,9 @@
+[submodule "mumble"]
+	path = mumble
+	url = https://github.com/RaidcoreGG/RCGG-lib-mumble-api/
+[submodule "nexus"]
+	path = nexus
+	url = https://github.com/RaidcoreGG/RCGG-lib-nexus-api
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/ocornut/imgui/
