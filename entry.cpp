@@ -544,12 +544,7 @@ void AddonRender()
 		RECT rect{};
 		GetWindowRect(Game, &rect);
 
-		//std::thread([rect]()
-		//	{
-		//		Sleep(50);
-				SetCursorPos((rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2);
-		//	})
-		//	.detach();
+		SetCursorPos((rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2);
 	}
 }
 
