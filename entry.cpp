@@ -204,6 +204,7 @@ std::filesystem::path SettingsPath{};
 std::mutex Mutex;
 
 bool isSettingKeybind = false;
+bool resetCursorToCenter = false;
 bool enableInCombat = false;
 bool enableOnMount = false;
 bool wasInCombat = false;
@@ -535,8 +536,20 @@ void AddonRender()
 		if (disableActionCam.Shift)
 		{
 			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
-			Sleep(5);
 		}
+	}
+
+	if (actionCamControlled && resetCursorToCenter)
+	{
+		RECT rect{};
+		GetWindowRect(Game, &rect);
+
+		//std::thread([rect]()
+		//	{
+		//		Sleep(50);
+				SetCursorPos((rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2);
+		//	})
+		//	.detach();
 	}
 }
 
@@ -552,6 +565,11 @@ void AddonOptions()
 		ImGui::OpenPopup("Set Keybind: MouseLookHandler", ImGuiPopupFlags_AnyPopupLevel);
 	}
 	ImGui::TooltipGeneric("This should match whatever keybind you're using in-game for \"Disable Action Cam\".\nAvoid using keybinds with modifiers such as Alt, Ctrl and Shift as those will be permanently \"pressed\" while moving.\nUse a key that you don't use at all and can't easily reach.");
+
+	if (ImGui::Checkbox("Reset Cursor to Center after action cam", &resetCursorToCenter))
+	{
+		SaveSettings(SettingsPath);
+	}
 
 	if (ImGui::Checkbox("Always enable in combat", &enableInCombat))
 	{
@@ -701,6 +719,7 @@ void LoadSettings(std::filesystem::path aPath)
 		if (!Settings["DAC_CTRL"].is_null()) { Settings["DAC_CTRL"].get_to(disableActionCam.Ctrl); }
 		if (!Settings["DAC_SHIFT"].is_null()) { Settings["DAC_SHIFT"].get_to(disableActionCam.Shift); }
 
+		if (!Settings["RESET_CURSOR_CENTER"].is_null()) { Settings["RESET_CURSOR_CENTER"].get_to(resetCursorToCenter); }
 		if (!Settings["ENABLE_DURING_COMBAT"].is_null()) { Settings["ENABLE_DURING_COMBAT"].get_to(enableInCombat); }
 		if (!Settings["ENABLE_ON_MOUNT"].is_null()) { Settings["ENABLE_ON_MOUNT"].get_to(enableOnMount); }
 
@@ -724,6 +743,7 @@ void SaveSettings(std::filesystem::path aPath)
 	Settings["DAC_CTRL"] = disableActionCam.Ctrl;
 	Settings["DAC_SHIFT"] = disableActionCam.Shift;
 
+	Settings["RESET_CURSOR_CENTER"] = resetCursorToCenter;
 	Settings["ENABLE_DURING_COMBAT"] = enableInCombat;
 	Settings["ENABLE_ON_MOUNT"] = enableOnMount;
 
