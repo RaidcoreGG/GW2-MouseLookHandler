@@ -59,9 +59,22 @@ const char* ConvertToUTF8(const char* multibyteStr)
 	return utf8Str;
 }
 
+bool operator==(const Keybind& lhs, const Keybind& rhs)
+{
+	return	lhs.Key == rhs.Key &&
+		lhs.Alt == rhs.Alt &&
+		lhs.Ctrl == rhs.Ctrl &&
+		lhs.Shift == rhs.Shift;
+}
+
+bool operator!=(const Keybind& lhs, const Keybind& rhs)
+{
+	return	!(lhs == rhs);
+}
+
 std::string KeybindToString(Keybind& keybind, bool padded)
 {
-	if (!keybind.Key) { return "(null)"; }
+	if (keybind == Keybind{}) { return "(null)"; }
 
 	char* buff = new char[100];
 	std::string str;
@@ -113,19 +126,6 @@ std::string KeybindToString(Keybind& keybind, bool padded)
 	const char* utf8_bytes = ConvertToUTF8(multibyte_pointer);
 
 	return std::string(utf8_bytes);
-}
-
-bool operator==(const Keybind& lhs, const Keybind& rhs)
-{
-	return	lhs.Key == rhs.Key &&
-		lhs.Alt == rhs.Alt &&
-		lhs.Ctrl == rhs.Ctrl &&
-		lhs.Shift == rhs.Shift;
-}
-
-bool operator!=(const Keybind& lhs, const Keybind& rhs)
-{
-	return	!(lhs == rhs);
 }
 
 typedef struct KeystrokeMessageFlags
@@ -211,6 +211,7 @@ bool wasInCombat = false;
 bool wasMoving = false;
 bool wasMounted = false;
 bool wasDisabling = false;
+bool wasMapOpen = false;
 bool redirectLeftClick = false;
 bool redirectRightClick = false;
 
@@ -433,37 +434,7 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		}
 	}
 
-	if (WM_KEYDOWN == uMsg)
-	{
-		if (wParam <= 255)
-		{
-			KeyLParam keylp = LParamToKMF(lParam);
-
-			Keybind kb{};
-			kb.Alt = GetKeyState(VK_MENU) & 0x8000;
-			kb.Ctrl = GetKeyState(VK_CONTROL) & 0x8000;
-			kb.Shift = GetKeyState(VK_SHIFT) & 0x8000;
-			kb.Key = keylp.GetScanCode();
-
-			// if shift, ctrl or alt set key to 0
-			if (wParam == 16 || wParam == 17 || wParam == 18)
-			{
-				kb.Key = 0;
-			}
-
-			if (kb == overrideDisable)
-			{
-				overridingDisable = true;
-				return 0;
-			}
-
-			if (isSettingKeybind)
-			{
-				CurrentKeybind = kb;
-			}
-		}
-	}
-	else if (WM_KEYUP == uMsg)
+	if (WM_KEYDOWN == uMsg || WM_SYSKEYDOWN == uMsg)
 	{
 		KeyLParam keylp = LParamToKMF(lParam);
 
@@ -477,11 +448,45 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		if (wParam == 16 || wParam == 17 || wParam == 18)
 		{
 			kb.Key = 0;
+			if (wParam == 16) { kb.Shift = true; }
+			if (wParam == 17) { kb.Ctrl = true; }
+			if (wParam == 18) { kb.Alt = true; }
+		}
+
+		if (kb == overrideDisable)
+		{
+			overridingDisable = true;
+			return 0;
+		}
+
+		if (isSettingKeybind)
+		{
+			CurrentKeybind = kb;
+		}
+	}
+	else if (WM_KEYUP == uMsg || WM_SYSKEYUP == uMsg)
+	{
+		KeyLParam keylp = LParamToKMF(lParam);
+
+		Keybind kb{};
+		kb.Alt = GetKeyState(VK_MENU) & 0x8000;
+		kb.Ctrl = GetKeyState(VK_CONTROL) & 0x8000;
+		kb.Shift = GetKeyState(VK_SHIFT) & 0x8000;
+		kb.Key = keylp.GetScanCode();
+
+		// if shift, ctrl or alt set key to 0
+		if (wParam == 16 || wParam == 17 || wParam == 18)
+		{
+			kb.Key = 0;
+			if (wParam == 16) { kb.Shift = true; }
+			if (wParam == 17) { kb.Ctrl = true; }
+			if (wParam == 18) { kb.Alt = true; }
 		}
 
 		if (kb == overrideDisable)
 		{
 			overridingDisable = false;
+			return 0;
 		}
 	}
 
@@ -500,19 +505,28 @@ void AddonRender()
 	if ((true == NexusLink->IsMoving && false == wasMoving) ||
 		(true == enableInCombat && true == MumbleLink->Context.IsInCombat && false == wasInCombat) ||
 		(true == enableOnMount && Mumble::EMountIndex::None != MumbleLink->Context.MountIndex && false == wasMounted) ||
-		(true == actionCamControlled && false == overridingDisable && true == wasDisabling))
+		(true == actionCamControlled && false == overridingDisable && true == wasDisabling) || 
+		(false == MumbleLink->Context.IsMapOpen && true == wasMapOpen))
 	{
 		wasMoving = NexusLink->IsMoving;
 		wasInCombat = MumbleLink->Context.IsInCombat;
 		wasMounted = MumbleLink->Context.MountIndex != Mumble::EMountIndex::None;
 		wasDisabling = overridingDisable;
+		wasMapOpen = MumbleLink->Context.IsMapOpen;
+
+		if (wasMapOpen && (overridingDisable && !(wasMoving || wasInCombat || wasMounted)))
+		{
+			// do not send if map is open
+			return;
+		}
+
 		actionCamControlled = true;
 
 		if (disableActionCam == Keybind{} || disableActionCam.Key == 0) { return; }
 
 		if (disableActionCam.Alt)
 		{
-			PostMessage(Game, WM_SYSKEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, true));
+			PostMessage(Game, WM_SYSKEYDOWN, VK_MENU, GetLPARAM(VK_MENU, true, true));
 			Sleep(5);
 		}
 		if (disableActionCam.Ctrl)
@@ -536,14 +550,16 @@ void AddonRender()
 	else if ((false == NexusLink->IsMoving && true == wasMoving) ||
 			(true == enableInCombat && false == MumbleLink->Context.IsInCombat && true == wasInCombat) ||
 			(true == enableOnMount && Mumble::EMountIndex::None == MumbleLink->Context.MountIndex && true == wasMounted) ||
-			(true == actionCamControlled && true == overridingDisable && false == wasDisabling))
+			(true == actionCamControlled && true == overridingDisable && false == wasDisabling) ||
+			(true == MumbleLink->Context.IsMapOpen && false == wasMapOpen))
 	{
 		wasMoving = NexusLink->IsMoving;
 		wasInCombat = MumbleLink->Context.IsInCombat;
 		wasMounted = MumbleLink->Context.MountIndex != Mumble::EMountIndex::None;
 		wasDisabling = overridingDisable;
+		wasMapOpen = MumbleLink->Context.IsMapOpen;
 
-		if ((wasMoving || wasInCombat || wasMounted) && !overridingDisable)
+		if (((wasMoving || wasInCombat || wasMounted) && !overridingDisable) && !wasMapOpen)
 		{
 			// still moving, etc do not send disable
 			return;
@@ -563,7 +579,7 @@ void AddonRender()
 
 		if (disableActionCam.Alt)
 		{
-			PostMessage(Game, WM_SYSKEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, true));
+			PostMessage(Game, WM_SYSKEYUP, VK_MENU, GetLPARAM(VK_MENU, false, true));
 			Sleep(5);
 		}
 		if (disableActionCam.Ctrl)
@@ -577,7 +593,7 @@ void AddonRender()
 		}
 	}
 
-	if (actionCamControlled && resetCursorToCenter && !overridingDisable)
+	if (actionCamControlled && resetCursorToCenter && !overridingDisable && MumbleLink->Context.IsGameFocused && !MumbleLink->Context.IsMapOpen)
 	{
 		RECT rect{};
 		GetWindowRect(Game, &rect);
@@ -592,7 +608,7 @@ void AddonOptions()
 
 	ImGui::Text("Disable Action Cam:");
 	ImGui::SameLine();
-	if (ImGui::Button(KeybindToString(disableActionCam, true).c_str()))
+	if (ImGui::Button((KeybindToString(disableActionCam, true) + "##DisableActionCam").c_str()))
 	{
 		CurrentTargetBind = ETargetBind::DisableActionCam;
 		ImGui::OpenPopup("Set Keybind: MouseLookHandler", ImGuiPopupFlags_AnyPopupLevel);
@@ -616,7 +632,7 @@ void AddonOptions()
 
 	ImGui::Text("Hold to temporarily disable Action Cam:");
 	ImGui::SameLine();
-	if (ImGui::Button(KeybindToString(overrideDisable, true).c_str()))
+	if (ImGui::Button((KeybindToString(overrideDisable, true) + "##OverrideDisable").c_str()))
 	{
 		CurrentTargetBind = ETargetBind::OverrideDisable;
 		ImGui::OpenPopup("Set Keybind: MouseLookHandler", ImGuiPopupFlags_AnyPopupLevel);
@@ -627,7 +643,7 @@ void AddonOptions()
 	{
 		ImGui::Text("Left-Click Action:");
 		ImGui::SameLine();
-		if (ImGui::Button(KeybindToString(leftClickTarget, true).c_str()))
+		if (ImGui::Button((KeybindToString(leftClickTarget, true) + "##LeftClickTarget").c_str()))
 		{
 			CurrentTargetBind = ETargetBind::LeftClick;
 			ImGui::OpenPopup("Set Keybind: MouseLookHandler", ImGuiPopupFlags_AnyPopupLevel);
@@ -638,7 +654,7 @@ void AddonOptions()
 	{
 		ImGui::Text("Right-Click Action:");
 		ImGui::SameLine();
-		if (ImGui::Button(KeybindToString(rightClickTarget, true).c_str()))
+		if (ImGui::Button((KeybindToString(rightClickTarget, true) + "##RightClickTarget").c_str()))
 		{
 			CurrentTargetBind = ETargetBind::RightClick;
 			ImGui::OpenPopup("Set Keybind: MouseLookHandler", ImGuiPopupFlags_AnyPopupLevel);
