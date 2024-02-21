@@ -341,26 +341,6 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(leftClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
 
-		// keyup
-		key.TransitionState = true;
-		PostMessage(Game, WM_KEYUP, MapVirtualKeyA(leftClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
-
-		if (leftClickTarget.Alt)
-		{
-			PostMessage(Game, WM_SYSKEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, true));
-			Sleep(5);
-		}
-		if (leftClickTarget.Ctrl)
-		{
-			PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, false));
-			Sleep(5);
-		}
-		if (leftClickTarget.Shift)
-		{
-			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
-			Sleep(5);
-		}
-
 		return 0;
 	}
 	if (uMsg == WM_RBUTTONDOWN && true == redirectRightClick && true == wasMoving)
@@ -390,8 +370,41 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(rightClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
 
-		// keyup
+		return 0;
+	}
+
+	if (uMsg == WM_LBUTTONUP && true == redirectLeftClick && true == wasMoving)
+	{
+		KeyLParam key{};
 		key.TransitionState = true;
+		key.ExtendedFlag = (leftClickTarget.Key & 0xE000) != 0;
+		key.ScanCode = leftClickTarget.Key;
+
+		PostMessage(Game, WM_KEYUP, MapVirtualKeyA(leftClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
+
+		if (leftClickTarget.Alt)
+		{
+			PostMessage(Game, WM_SYSKEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, true));
+			Sleep(5);
+		}
+		if (leftClickTarget.Ctrl)
+		{
+			PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, false));
+			Sleep(5);
+		}
+		if (leftClickTarget.Shift)
+		{
+			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
+			Sleep(5);
+		}
+	}
+	if (uMsg == WM_RBUTTONUP && true == redirectRightClick && true == wasMoving)
+	{
+		KeyLParam key{};
+		key.TransitionState = true;
+		key.ExtendedFlag = (rightClickTarget.Key & 0xE000) != 0;
+		key.ScanCode = rightClickTarget.Key;
+
 		PostMessage(Game, WM_KEYUP, MapVirtualKeyA(rightClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
 
 		if (rightClickTarget.Alt)
@@ -409,8 +422,6 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
 			Sleep(5);
 		}
-
-		return 0;
 	}
 
 	if (isSettingKeybind)
