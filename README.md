@@ -16,5 +16,11 @@ Install via the [Nexus](https://raidcore.gg/Nexus) Addon Library or download the
 ## Features
 - Automatically enable action cam while moving.
 - Automatically enable action cam while in combat.
+- Automatically enable action cam while mounted.
 - Reroute left-/right-click to another button while action cam is on. E.g. right-click to dodge.
-- Hold down a specific key to temporarily disable action cam
+- Reset cursor to center after action cam.
+- Hold down a specific key to temporarily disable action cam.
+
+## How it works
+Using the Mumble API to keep track of whether the player is moving or mounted.
+Hooking WndProc to intercept inputs and then sending different inputs.
