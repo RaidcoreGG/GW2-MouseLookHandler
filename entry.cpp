@@ -561,7 +561,7 @@ void AddonOptions()
 	}
 	ImGui::TooltipGeneric("This should match whatever keybind you're using in-game for \"Disable Action Cam\".\nAvoid using keybinds with modifiers such as Alt, Ctrl and Shift as those will be permanently \"pressed\" while moving.\nUse a key that you don't use at all and can't easily reach.");
 
-	if (ImGui::Checkbox("Reset Cursor to Center after action cam", &resetCursorToCenter))
+	if (ImGui::Checkbox("Reset Cursor to Center after Action Cam", &resetCursorToCenter))
 	{
 		SaveSettings(SettingsPath);
 	}
