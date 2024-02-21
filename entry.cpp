@@ -12,6 +12,28 @@
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
 
+namespace ImGui
+{
+	static bool Tooltip()
+	{
+		bool hovered = ImGui::IsItemHovered();
+		if (hovered)
+		{
+			ImGui::BeginTooltip();
+		}
+		return hovered;
+	}
+
+	static void TooltipGeneric(const char* fmt, ...)
+	{
+		if (ImGui::Tooltip())
+		{
+			ImGui::Text(fmt);
+			ImGui::EndTooltip();
+		}
+	}
+}
+
 std::map<unsigned short, std::string> ScancodeLookupTable;
 
 const char* ConvertToUTF8(const char* multibyteStr)
@@ -382,13 +404,13 @@ void AddonOptions()
 {
 	ImGui::TextDisabled("MouseLookHandler");
 
+	ImGui::Text("Disable Action Cam:");
+	ImGui::SameLine();
 	if (ImGui::Button(KeybindToString(disableActionCam, true).c_str()))
 	{
 		ImGui::OpenPopup("Set Keybind: MouseLookHandler", ImGuiPopupFlags_AnyPopupLevel);
 	}
-	ImGui::Text("This should match whatever keybind you're using in-game for \"Disable Action Cam\".");
-	ImGui::Text("Avoid using keybinds with modifiers such as Alt, Ctrl and Shift as those will be permanently \"pressed\" while moving.");
-	ImGui::Text("Use a key that you don't use at all and can't easily reach.");
+	ImGui::TooltipGeneric("This should match whatever keybind you're using in-game for \"Disable Action Cam\".\nAvoid using keybinds with modifiers such as Alt, Ctrl and Shift as those will be permanently \"pressed\" while moving.\nUse a key that you don't use at all and can't easily reach.");
 
 	if (ImGui::Checkbox("Always enable in combat", &enableInCombat))
 	{
