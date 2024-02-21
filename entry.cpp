@@ -323,7 +323,7 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	Game = hWnd;
 
-	if (uMsg == WM_LBUTTONDOWN && true == redirectLeftClick && true == actionCamControlled)
+	if (uMsg == WM_LBUTTONDOWN && true == redirectLeftClick && true == actionCamControlled && false == overridingDisable)
 	{
 		if (leftClickTarget == Keybind{} || leftClickTarget.Key == 0) { return uMsg; }
 
@@ -352,7 +352,7 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		return 0;
 	}
-	if (uMsg == WM_RBUTTONDOWN && true == redirectRightClick && true == actionCamControlled)
+	if (uMsg == WM_RBUTTONDOWN && true == redirectRightClick && true == actionCamControlled && false == overridingDisable)
 	{
 		if (rightClickTarget == Keybind{} || rightClickTarget.Key == 0) { return uMsg; }
 
@@ -382,7 +382,7 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		return 0;
 	}
 
-	if (uMsg == WM_LBUTTONUP && true == redirectLeftClick && true == actionCamControlled)
+	if (uMsg == WM_LBUTTONUP && true == redirectLeftClick && true == actionCamControlled && false == overridingDisable)
 	{
 		KeyLParam key{};
 		key.TransitionState = true;
@@ -407,7 +407,7 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			Sleep(5);
 		}
 	}
-	if (uMsg == WM_RBUTTONUP && true == redirectRightClick && true == actionCamControlled)
+	if (uMsg == WM_RBUTTONUP && true == redirectRightClick && true == actionCamControlled && false == overridingDisable)
 	{
 		KeyLParam key{};
 		key.TransitionState = true;
