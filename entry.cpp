@@ -205,10 +205,14 @@ std::mutex Mutex;
 
 bool isSettingKeybind = false;
 bool enableInCombat = false;
+bool enableOnMount = false;
 bool wasInCombat = false;
 bool wasMoving = false;
+bool wasMounted = false;
 bool redirectLeftClick = false;
 bool redirectRightClick = false;
+
+bool actionCamControlled = false;
 
 enum class ETargetBind
 {
@@ -314,7 +318,7 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	Game = hWnd;
 
-	if (uMsg == WM_LBUTTONDOWN && true == redirectLeftClick && true == wasMoving)
+	if (uMsg == WM_LBUTTONDOWN && true == redirectLeftClick && true == actionCamControlled)
 	{
 		if (leftClickTarget == Keybind{} || leftClickTarget.Key == 0) { return uMsg; }
 
@@ -343,7 +347,7 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		return 0;
 	}
-	if (uMsg == WM_RBUTTONDOWN && true == redirectRightClick && true == wasMoving)
+	if (uMsg == WM_RBUTTONDOWN && true == redirectRightClick && true == actionCamControlled)
 	{
 		if (rightClickTarget == Keybind{} || rightClickTarget.Key == 0) { return uMsg; }
 
@@ -373,7 +377,7 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		return 0;
 	}
 
-	if (uMsg == WM_LBUTTONUP && true == redirectLeftClick && true == wasMoving)
+	if (uMsg == WM_LBUTTONUP && true == redirectLeftClick && true == actionCamControlled)
 	{
 		KeyLParam key{};
 		key.TransitionState = true;
@@ -398,7 +402,7 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			Sleep(5);
 		}
 	}
-	if (uMsg == WM_RBUTTONUP && true == redirectRightClick && true == wasMoving)
+	if (uMsg == WM_RBUTTONUP && true == redirectRightClick && true == actionCamControlled)
 	{
 		KeyLParam key{};
 		key.TransitionState = true;
@@ -462,9 +466,13 @@ void AddonRender()
 	if (nullptr == NexusLink || nullptr == MumbleLink) { return; }
 
 	if ((true == NexusLink->IsMoving && false == wasMoving) ||
-		(true == enableInCombat && true == MumbleLink->Context.IsInCombat && false == wasInCombat))
+		(true == enableInCombat && true == MumbleLink->Context.IsInCombat && false == wasInCombat) ||
+		(true == enableOnMount && Mumble::EMountIndex::None != MumbleLink->Context.MountIndex && false == wasMounted))
 	{
-		wasMoving = true;
+		wasMoving = NexusLink->IsMoving;
+		wasInCombat = MumbleLink->Context.IsInCombat;
+		wasMounted = MumbleLink->Context.MountIndex != Mumble::EMountIndex::None;
+		actionCamControlled = true;
 
 		if (disableActionCam == Keybind{} || disableActionCam.Key == 0) { return; }
 
@@ -492,9 +500,20 @@ void AddonRender()
 		PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(disableActionCam.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
 	}
 	else if ((false == NexusLink->IsMoving && true == wasMoving) ||
-			(true == enableInCombat && false == MumbleLink->Context.IsInCombat && true == wasInCombat))
+			(true == enableInCombat && false == MumbleLink->Context.IsInCombat && true == wasInCombat) ||
+			(true == enableOnMount && Mumble::EMountIndex::None == MumbleLink->Context.MountIndex && true == wasMounted))
 	{
-		wasMoving = false;
+		wasMoving = NexusLink->IsMoving;
+		wasInCombat = MumbleLink->Context.IsInCombat;
+		wasMounted = MumbleLink->Context.MountIndex != Mumble::EMountIndex::None;
+
+		if (wasMoving || wasInCombat || wasMounted)
+		{
+			// still moving, etc do not send disable
+			return;
+		}
+
+		actionCamControlled = false;
 
 		KeyLParam key{};
 		key.TransitionState = false;
@@ -535,6 +554,11 @@ void AddonOptions()
 	ImGui::TooltipGeneric("This should match whatever keybind you're using in-game for \"Disable Action Cam\".\nAvoid using keybinds with modifiers such as Alt, Ctrl and Shift as those will be permanently \"pressed\" while moving.\nUse a key that you don't use at all and can't easily reach.");
 
 	if (ImGui::Checkbox("Always enable in combat", &enableInCombat))
+	{
+		SaveSettings(SettingsPath);
+	}
+
+	if (ImGui::Checkbox("Stay enabled while standing on mount", &enableOnMount))
 	{
 		SaveSettings(SettingsPath);
 	}
@@ -678,6 +702,7 @@ void LoadSettings(std::filesystem::path aPath)
 		if (!Settings["DAC_SHIFT"].is_null()) { Settings["DAC_SHIFT"].get_to(disableActionCam.Shift); }
 
 		if (!Settings["ENABLE_DURING_COMBAT"].is_null()) { Settings["ENABLE_DURING_COMBAT"].get_to(enableInCombat); }
+		if (!Settings["ENABLE_ON_MOUNT"].is_null()) { Settings["ENABLE_ON_MOUNT"].get_to(enableOnMount); }
 
 		if (!Settings["REDIRECT_LEFTCLICK"].is_null()) { Settings["REDIRECT_LEFTCLICK"].get_to(redirectLeftClick); }
 		if (!Settings["LC_KEY"].is_null()) { Settings["LC_KEY"].get_to(leftClickTarget.Key); }
@@ -700,6 +725,7 @@ void SaveSettings(std::filesystem::path aPath)
 	Settings["DAC_SHIFT"] = disableActionCam.Shift;
 
 	Settings["ENABLE_DURING_COMBAT"] = enableInCombat;
+	Settings["ENABLE_ON_MOUNT"] = enableOnMount;
 
 	Settings["REDIRECT_LEFTCLICK"] = redirectLeftClick;
 	Settings["LC_KEY"] = leftClickTarget.Key;
