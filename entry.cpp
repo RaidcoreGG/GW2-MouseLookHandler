@@ -161,6 +161,27 @@ LPARAM& KMFToLParam(KeystrokeMessageFlags& kmf)
 	return *(LPARAM*)&kmf;
 }
 
+LPARAM GetLPARAM(uint32_t key, bool down, bool sys)
+{
+	uint64_t lp;
+	lp = down ? 0 : 1; // transition state
+	lp = lp << 1;
+	lp += down ? 0 : 1; // previous key state
+	lp = lp << 1;
+	lp += 0; // context code
+	lp = lp << 1;
+	lp = lp << 4;
+	lp = lp << 1;
+	lp = lp << 8;
+	lp += MapVirtualKeyA(key, MAPVK_VK_TO_VSC);
+	lp = lp << 16;
+	lp += 1;
+
+	//APIDefs->Log(ELogLevel_TRACE, std::to_string(lp).c_str());
+
+	return lp;
+}
+
 void AddonLoad(AddonAPI* aApi);
 void AddonUnload();
 UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -186,11 +207,24 @@ bool isSettingKeybind = false;
 bool enableInCombat = false;
 bool wasInCombat = false;
 bool wasMoving = false;
+bool redirectLeftClick = false;
+bool redirectRightClick = false;
 
+enum class ETargetBind
+{
+	None,
+	DisableActionCam,
+	LeftClick,
+	RightClick
+};
+
+ETargetBind CurrentTargetBind = ETargetBind::None;
 Keybind CurrentKeybind{};
 Keybind disableActionCam{};
+Keybind leftClickTarget{};
+Keybind rightClickTarget{};
 
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
 	switch (ul_reason_for_call)
 	{
@@ -274,13 +308,110 @@ void AddonUnload()
 
 	MumbleLink = nullptr;
 	NexusLink = nullptr;
-
-	SaveSettings(SettingsPath);
 }
 
 UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	Game = hWnd;
+
+	if (uMsg == WM_LBUTTONDOWN && true == redirectLeftClick && true == wasMoving)
+	{
+		if (leftClickTarget == Keybind{} || leftClickTarget.Key == 0) { return uMsg; }
+
+		if (leftClickTarget.Alt)
+		{
+			PostMessage(Game, WM_SYSKEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, true));
+			Sleep(5);
+		}
+		if (leftClickTarget.Ctrl)
+		{
+			PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, false));
+			Sleep(5);
+		}
+		if (leftClickTarget.Shift)
+		{
+			PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, true, false));
+			Sleep(5);
+		}
+
+		KeyLParam key{};
+		key.TransitionState = false;
+		key.ExtendedFlag = (leftClickTarget.Key & 0xE000) != 0;
+		key.ScanCode = leftClickTarget.Key;
+
+		PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(leftClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
+
+		// keyup
+		key.TransitionState = true;
+		PostMessage(Game, WM_KEYUP, MapVirtualKeyA(leftClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
+
+		if (leftClickTarget.Alt)
+		{
+			PostMessage(Game, WM_SYSKEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, true));
+			Sleep(5);
+		}
+		if (leftClickTarget.Ctrl)
+		{
+			PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, false));
+			Sleep(5);
+		}
+		if (leftClickTarget.Shift)
+		{
+			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
+			Sleep(5);
+		}
+
+		return 0;
+	}
+	if (uMsg == WM_RBUTTONDOWN && true == redirectRightClick && true == wasMoving)
+	{
+		if (rightClickTarget == Keybind{} || rightClickTarget.Key == 0) { return uMsg; }
+
+		if (rightClickTarget.Alt)
+		{
+			PostMessage(Game, WM_SYSKEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, true));
+			Sleep(5);
+		}
+		if (rightClickTarget.Ctrl)
+		{
+			PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, false));
+			Sleep(5);
+		}
+		if (rightClickTarget.Shift)
+		{
+			PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, true, false));
+			Sleep(5);
+		}
+
+		KeyLParam key{};
+		key.TransitionState = false;
+		key.ExtendedFlag = (rightClickTarget.Key & 0xE000) != 0;
+		key.ScanCode = rightClickTarget.Key;
+
+		PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(rightClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
+
+		// keyup
+		key.TransitionState = true;
+		PostMessage(Game, WM_KEYUP, MapVirtualKeyA(rightClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
+
+		if (rightClickTarget.Alt)
+		{
+			PostMessage(Game, WM_SYSKEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, true));
+			Sleep(5);
+		}
+		if (rightClickTarget.Ctrl)
+		{
+			PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, false));
+			Sleep(5);
+		}
+		if (rightClickTarget.Shift)
+		{
+			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
+			Sleep(5);
+		}
+
+		return 0;
+	}
 
 	if (isSettingKeybind)
 	{
@@ -313,27 +444,6 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	}
 
 	return uMsg;
-}
-
-LPARAM GetLPARAM(uint32_t key, bool down, bool sys)
-{
-	uint64_t lp;
-	lp = down ? 0 : 1; // transition state
-	lp = lp << 1;
-	lp += down ? 0 : 1; // previous key state
-	lp = lp << 1;
-	lp += 0; // context code
-	lp = lp << 1;
-	lp = lp << 4;
-	lp = lp << 1;
-	lp = lp << 8;
-	lp += MapVirtualKeyA(key, MAPVK_VK_TO_VSC);
-	lp = lp << 16;
-	lp += 1;
-
-	//APIDefs->Log(ELogLevel_TRACE, std::to_string(lp).c_str());
-
-	return lp;
 }
 
 void AddonRender()
@@ -408,6 +518,7 @@ void AddonOptions()
 	ImGui::SameLine();
 	if (ImGui::Button(KeybindToString(disableActionCam, true).c_str()))
 	{
+		CurrentTargetBind = ETargetBind::DisableActionCam;
 		ImGui::OpenPopup("Set Keybind: MouseLookHandler", ImGuiPopupFlags_AnyPopupLevel);
 	}
 	ImGui::TooltipGeneric("This should match whatever keybind you're using in-game for \"Disable Action Cam\".\nAvoid using keybinds with modifiers such as Alt, Ctrl and Shift as those will be permanently \"pressed\" while moving.\nUse a key that you don't use at all and can't easily reach.");
@@ -417,6 +528,29 @@ void AddonOptions()
 		SaveSettings(SettingsPath);
 	}
 
+	ImGui::Checkbox("Redirect Left-Click while moving", &redirectLeftClick);
+	if (redirectLeftClick)
+	{
+		ImGui::Text("Left-Click Action:");
+		ImGui::SameLine();
+		if (ImGui::Button(KeybindToString(leftClickTarget, true).c_str()))
+		{
+			CurrentTargetBind = ETargetBind::LeftClick;
+			ImGui::OpenPopup("Set Keybind: MouseLookHandler", ImGuiPopupFlags_AnyPopupLevel);
+		}
+	}
+	ImGui::Checkbox("Redirect Right-Click while moving", &redirectRightClick);
+	if (redirectRightClick)
+	{
+		ImGui::Text("Right-Click Action:");
+		ImGui::SameLine();
+		if (ImGui::Button(KeybindToString(rightClickTarget, true).c_str()))
+		{
+			CurrentTargetBind = ETargetBind::RightClick;
+			ImGui::OpenPopup("Set Keybind: MouseLookHandler", ImGuiPopupFlags_AnyPopupLevel);
+		}
+	}
+
 	ImGui::Separator();
 
 	if (ImGui::BeginPopupModal("Set Keybind: MouseLookHandler"))
@@ -424,7 +558,18 @@ void AddonOptions()
 		isSettingKeybind = true;
 		if (CurrentKeybind == Keybind{})
 		{
-			ImGui::Text(KeybindToString(disableActionCam, true).c_str());
+			switch (CurrentTargetBind)
+			{
+			case ETargetBind::DisableActionCam:
+				ImGui::Text(KeybindToString(disableActionCam, true).c_str());
+				break;
+			case ETargetBind::LeftClick:
+				ImGui::Text(KeybindToString(leftClickTarget, true).c_str());
+				break;
+			case ETargetBind::RightClick:
+				ImGui::Text(KeybindToString(rightClickTarget, true).c_str());
+				break;
+			}
 		}
 		else
 		{
@@ -435,8 +580,18 @@ void AddonOptions()
 
 		if (ImGui::Button("Unbind"))
 		{
-			disableActionCam = {};
-			SaveSettings(Settings);
+			switch (CurrentTargetBind)
+			{
+			case ETargetBind::DisableActionCam:
+				disableActionCam = {};
+				break;
+			case ETargetBind::LeftClick:
+				leftClickTarget = {};
+				break;
+			case ETargetBind::RightClick:
+				rightClickTarget = {};
+				break;
+			}
 			close = true;
 		}
 
@@ -452,7 +607,18 @@ void AddonOptions()
 
 		if (ImGui::Button("Accept"))
 		{
-			disableActionCam = CurrentKeybind;
+			switch (CurrentTargetBind)
+			{
+			case ETargetBind::DisableActionCam:
+				disableActionCam = CurrentKeybind;
+				break;
+			case ETargetBind::LeftClick:
+				leftClickTarget = CurrentKeybind;
+				break;
+			case ETargetBind::RightClick:
+				rightClickTarget = CurrentKeybind;
+				break;
+			}
 			close = true;
 		}
 		ImGui::SameLine();
@@ -499,7 +665,20 @@ void LoadSettings(std::filesystem::path aPath)
 		if (!Settings["DAC_ALT"].is_null()) { Settings["DAC_ALT"].get_to(disableActionCam.Alt); }
 		if (!Settings["DAC_CTRL"].is_null()) { Settings["DAC_CTRL"].get_to(disableActionCam.Ctrl); }
 		if (!Settings["DAC_SHIFT"].is_null()) { Settings["DAC_SHIFT"].get_to(disableActionCam.Shift); }
+
 		if (!Settings["ENABLE_DURING_COMBAT"].is_null()) { Settings["ENABLE_DURING_COMBAT"].get_to(enableInCombat); }
+
+		if (!Settings["REDIRECT_LEFTCLICK"].is_null()) { Settings["REDIRECT_LEFTCLICK"].get_to(redirectLeftClick); }
+		if (!Settings["LC_KEY"].is_null()) { Settings["LC_KEY"].get_to(leftClickTarget.Key); }
+		if (!Settings["LC_ALT"].is_null()) { Settings["LC_ALT"].get_to(leftClickTarget.Alt); }
+		if (!Settings["LC_CTRL"].is_null()) { Settings["LC_CTRL"].get_to(leftClickTarget.Ctrl); }
+		if (!Settings["LC_SHIFT"].is_null()) { Settings["LC_SHIFT"].get_to(leftClickTarget.Shift); }
+
+		if (!Settings["REDIRECT_RIGHTCLICK"].is_null()) { Settings["REDIRECT_RIGHTCLICK"].get_to(redirectRightClick); }
+		if (!Settings["RC_KEY"].is_null()) { Settings["RC_KEY"].get_to(rightClickTarget.Key); }
+		if (!Settings["RC_ALT"].is_null()) { Settings["RC_ALT"].get_to(rightClickTarget.Alt); }
+		if (!Settings["RC_CTRL"].is_null()) { Settings["RC_CTRL"].get_to(rightClickTarget.Ctrl); }
+		if (!Settings["RC_SHIFT"].is_null()) { Settings["RC_SHIFT"].get_to(rightClickTarget.Shift); }
 	}
 }
 void SaveSettings(std::filesystem::path aPath)
@@ -508,7 +687,20 @@ void SaveSettings(std::filesystem::path aPath)
 	Settings["DAC_ALT"] = disableActionCam.Alt;
 	Settings["DAC_CTRL"] = disableActionCam.Ctrl;
 	Settings["DAC_SHIFT"] = disableActionCam.Shift;
+
 	Settings["ENABLE_DURING_COMBAT"] = enableInCombat;
+
+	Settings["REDIRECT_LEFTCLICK"] = redirectLeftClick;
+	Settings["LC_KEY"] = leftClickTarget.Key;
+	Settings["LC_ALT"] = leftClickTarget.Alt;
+	Settings["LC_CTRL"] = leftClickTarget.Ctrl;
+	Settings["LC_SHIFT"] = leftClickTarget.Shift;
+
+	Settings["REDIRECT_RIGHTCLICK"] = redirectRightClick;
+	Settings["RC_KEY"] = rightClickTarget.Key;
+	Settings["RC_ALT"] = rightClickTarget.Alt;
+	Settings["RC_CTRL"] = rightClickTarget.Ctrl;
+	Settings["RC_SHIFT"] = rightClickTarget.Shift;
 
 	Mutex.lock();
 	{
