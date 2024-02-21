@@ -161,6 +161,8 @@ std::filesystem::path SettingsPath{};
 std::mutex Mutex;
 
 bool isSettingKeybind = false;
+bool enableInCombat = false;
+bool wasInCombat = false;
 bool wasMoving = false;
 
 Keybind CurrentKeybind{};
@@ -314,9 +316,10 @@ LPARAM GetLPARAM(uint32_t key, bool down, bool sys)
 
 void AddonRender()
 {
-	if (nullptr == NexusLink) { return; }
+	if (nullptr == NexusLink || nullptr == MumbleLink) { return; }
 
-	if (true == NexusLink->IsMoving && false == wasMoving)
+	if ((true == NexusLink->IsMoving && false == wasMoving) ||
+		(true == enableInCombat && true == MumbleLink->Context.IsInCombat && false == wasInCombat))
 	{
 		wasMoving = true;
 
@@ -340,18 +343,19 @@ void AddonRender()
 
 		KeyLParam key{};
 		key.TransitionState = false;
-		key.ExtendedFlag = disableActionCam.Key & 0xE000 != 0;
+		key.ExtendedFlag = (disableActionCam.Key & 0xE000) != 0;
 		key.ScanCode = disableActionCam.Key;
 
 		PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(disableActionCam.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
 	}
-	else if (false == NexusLink->IsMoving && true == wasMoving)
+	else if ((false == NexusLink->IsMoving && true == wasMoving) ||
+			(true == enableInCombat && false == MumbleLink->Context.IsInCombat && true == wasInCombat))
 	{
 		wasMoving = false;
 
 		KeyLParam key{};
 		key.TransitionState = false;
-		key.ExtendedFlag = disableActionCam.Key & 0xE000 != 0;
+		key.ExtendedFlag = (disableActionCam.Key & 0xE000) != 0;
 		key.ScanCode = disableActionCam.Key;
 		key.TransitionState = true;
 		PostMessage(Game, WM_KEYUP, MapVirtualKeyA(disableActionCam.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
@@ -385,6 +389,11 @@ void AddonOptions()
 	ImGui::Text("This should match whatever keybind you're using in-game for \"Disable Action Cam\".");
 	ImGui::Text("Avoid using keybinds with modifiers such as Alt, Ctrl and Shift as those will be permanently \"pressed\" while moving.");
 	ImGui::Text("Use a key that you don't use at all and can't easily reach.");
+
+	if (ImGui::Checkbox("Always enable in combat", &enableInCombat))
+	{
+		SaveSettings(SettingsPath);
+	}
 
 	ImGui::Separator();
 
@@ -468,6 +477,7 @@ void LoadSettings(std::filesystem::path aPath)
 		if (!Settings["DAC_ALT"].is_null()) { Settings["DAC_ALT"].get_to(disableActionCam.Alt); }
 		if (!Settings["DAC_CTRL"].is_null()) { Settings["DAC_CTRL"].get_to(disableActionCam.Ctrl); }
 		if (!Settings["DAC_SHIFT"].is_null()) { Settings["DAC_SHIFT"].get_to(disableActionCam.Shift); }
+		if (!Settings["ENABLE_DURING_COMBAT"].is_null()) { Settings["ENABLE_DURING_COMBAT"].get_to(enableInCombat); }
 	}
 }
 void SaveSettings(std::filesystem::path aPath)
@@ -476,6 +486,7 @@ void SaveSettings(std::filesystem::path aPath)
 	Settings["DAC_ALT"] = disableActionCam.Alt;
 	Settings["DAC_CTRL"] = disableActionCam.Ctrl;
 	Settings["DAC_SHIFT"] = disableActionCam.Shift;
+	Settings["ENABLE_DURING_COMBAT"] = enableInCombat;
 
 	Mutex.lock();
 	{
