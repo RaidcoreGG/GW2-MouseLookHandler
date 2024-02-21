@@ -434,6 +434,7 @@ void AddonOptions()
 		{
 			CurrentKeybind = Keybind{};
 			isSettingKeybind = false;
+			SaveSettings(SettingsPath);
 			ImGui::CloseCurrentPopup();
 		}
 
@@ -461,18 +462,21 @@ void LoadSettings(std::filesystem::path aPath)
 	}
 	Mutex.unlock();
 
-	/* Widget */
-	/*if (!Settings[IS_COMPASS_STRIP_VISIBLE].is_null())
+	if (!Settings.is_null())
 	{
-		Settings[IS_COMPASS_STRIP_VISIBLE].get_to<bool>(IsWidgetEnabled);
+		if (!Settings["DAC_KEY"].is_null()) { Settings["DAC_KEY"].get_to(disableActionCam.Key); }
+		if (!Settings["DAC_ALT"].is_null()) { Settings["DAC_ALT"].get_to(disableActionCam.Alt); }
+		if (!Settings["DAC_CTRL"].is_null()) { Settings["DAC_CTRL"].get_to(disableActionCam.Ctrl); }
+		if (!Settings["DAC_SHIFT"].is_null()) { Settings["DAC_SHIFT"].get_to(disableActionCam.Shift); }
 	}
-	if (!Settings[COMPASS_STRIP_OFFSET_V].is_null())
-	{
-		Settings[COMPASS_STRIP_OFFSET_V].get_to<float>(WidgetOffsetV);
-	}*/
 }
 void SaveSettings(std::filesystem::path aPath)
 {
+	Settings["DAC_KEY"] = disableActionCam.Key;
+	Settings["DAC_ALT"] = disableActionCam.Alt;
+	Settings["DAC_CTRL"] = disableActionCam.Ctrl;
+	Settings["DAC_SHIFT"] = disableActionCam.Shift;
+
 	Mutex.lock();
 	{
 		std::ofstream file(aPath);
