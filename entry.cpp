@@ -212,6 +212,7 @@ bool wasMoving = false;
 bool wasMounted = false;
 bool wasDisabling = false;
 bool wasMapOpen = false;
+bool wasGameFocused = false;
 bool redirectLeftClick = false;
 bool redirectRightClick = false;
 
@@ -320,117 +321,184 @@ void AddonUnload()
 	NexusLink = nullptr;
 }
 
+void SendDisableActionCam(bool down)
+{
+	if (down)
+	{
+		if (disableActionCam == Keybind{}) { return; }
+
+		if (disableActionCam.Alt)
+		{
+			PostMessage(Game, WM_SYSKEYDOWN, VK_MENU, GetLPARAM(VK_MENU, true, true));
+			Sleep(5);
+		}
+		if (disableActionCam.Ctrl)
+		{
+			PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, false));
+			Sleep(5);
+		}
+		if (disableActionCam.Shift)
+		{
+			PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, true, false));
+			Sleep(5);
+		}
+
+		KeyLParam key{};
+		key.TransitionState = false;
+		key.ExtendedFlag = (disableActionCam.Key & 0xE000) != 0;
+		key.ScanCode = disableActionCam.Key;
+
+		PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(disableActionCam.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
+
+		actionCamControlled = true;
+	}
+	else
+	{
+		KeyLParam key{};
+		key.TransitionState = true;
+		key.ExtendedFlag = (disableActionCam.Key & 0xE000) != 0;
+		key.ScanCode = disableActionCam.Key;
+		PostMessage(Game, WM_KEYUP, MapVirtualKeyA(disableActionCam.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
+
+		if (disableActionCam.Alt)
+		{
+			PostMessage(Game, WM_SYSKEYUP, VK_MENU, GetLPARAM(VK_MENU, false, true));
+			Sleep(5);
+		}
+		if (disableActionCam.Ctrl)
+		{
+			PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, false));
+			Sleep(5);
+		}
+		if (disableActionCam.Shift)
+		{
+			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
+		}
+
+		actionCamControlled = false;
+	}
+}
+
 UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	Game = hWnd;
 
-	if (uMsg == WM_LBUTTONDOWN && true == redirectLeftClick && true == actionCamControlled && false == overridingDisable)
+	if (true == actionCamControlled && false == overridingDisable)
 	{
-		if (leftClickTarget == Keybind{} || leftClickTarget.Key == 0) { return uMsg; }
-
-		if (leftClickTarget.Alt)
+		if (true == redirectLeftClick)
 		{
-			PostMessage(Game, WM_SYSKEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, true));
-			Sleep(5);
+			if (uMsg == WM_LBUTTONDOWN)
+			{
+				if (leftClickTarget == Keybind{} || leftClickTarget.Key == 0) { return uMsg; }
+
+				if (leftClickTarget.Alt)
+				{
+					PostMessage(Game, WM_SYSKEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, true));
+					Sleep(5);
+				}
+				if (leftClickTarget.Ctrl)
+				{
+					PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, false));
+					Sleep(5);
+				}
+				if (leftClickTarget.Shift)
+				{
+					PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, true, false));
+					Sleep(5);
+				}
+
+				KeyLParam key{};
+				key.TransitionState = false;
+				key.ExtendedFlag = (leftClickTarget.Key & 0xE000) != 0;
+				key.ScanCode = leftClickTarget.Key;
+
+				PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(leftClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
+
+				return 0;
+			}
+			else if (uMsg == WM_LBUTTONUP)
+			{
+				KeyLParam key{};
+				key.TransitionState = true;
+				key.ExtendedFlag = (leftClickTarget.Key & 0xE000) != 0;
+				key.ScanCode = leftClickTarget.Key;
+
+				PostMessage(Game, WM_KEYUP, MapVirtualKeyA(leftClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
+
+				if (leftClickTarget.Alt)
+				{
+					PostMessage(Game, WM_SYSKEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, true));
+					Sleep(5);
+				}
+				if (leftClickTarget.Ctrl)
+				{
+					PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, false));
+					Sleep(5);
+				}
+				if (leftClickTarget.Shift)
+				{
+					PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
+					Sleep(5);
+				}
+			}
 		}
-		if (leftClickTarget.Ctrl)
+
+		if (true == redirectRightClick)
 		{
-			PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, false));
-			Sleep(5);
-		}
-		if (leftClickTarget.Shift)
-		{
-			PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, true, false));
-			Sleep(5);
-		}
+			if (uMsg == WM_RBUTTONDOWN)
+			{
+				if (rightClickTarget == Keybind{} || rightClickTarget.Key == 0) { return uMsg; }
 
-		KeyLParam key{};
-		key.TransitionState = false;
-		key.ExtendedFlag = (leftClickTarget.Key & 0xE000) != 0;
-		key.ScanCode = leftClickTarget.Key;
+				if (rightClickTarget.Alt)
+				{
+					PostMessage(Game, WM_SYSKEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, true));
+					Sleep(5);
+				}
+				if (rightClickTarget.Ctrl)
+				{
+					PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, false));
+					Sleep(5);
+				}
+				if (rightClickTarget.Shift)
+				{
+					PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, true, false));
+					Sleep(5);
+				}
 
-		PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(leftClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
+				KeyLParam key{};
+				key.TransitionState = false;
+				key.ExtendedFlag = (rightClickTarget.Key & 0xE000) != 0;
+				key.ScanCode = rightClickTarget.Key;
 
-		return 0;
-	}
-	if (uMsg == WM_RBUTTONDOWN && true == redirectRightClick && true == actionCamControlled && false == overridingDisable)
-	{
-		if (rightClickTarget == Keybind{} || rightClickTarget.Key == 0) { return uMsg; }
+				PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(rightClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
 
-		if (rightClickTarget.Alt)
-		{
-			PostMessage(Game, WM_SYSKEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, true));
-			Sleep(5);
-		}
-		if (rightClickTarget.Ctrl)
-		{
-			PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, false));
-			Sleep(5);
-		}
-		if (rightClickTarget.Shift)
-		{
-			PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, true, false));
-			Sleep(5);
-		}
+				return 0;
+			}
+			else if (uMsg == WM_RBUTTONUP)
+			{
+				KeyLParam key{};
+				key.TransitionState = true;
+				key.ExtendedFlag = (rightClickTarget.Key & 0xE000) != 0;
+				key.ScanCode = rightClickTarget.Key;
 
-		KeyLParam key{};
-		key.TransitionState = false;
-		key.ExtendedFlag = (rightClickTarget.Key & 0xE000) != 0;
-		key.ScanCode = rightClickTarget.Key;
+				PostMessage(Game, WM_KEYUP, MapVirtualKeyA(rightClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
 
-		PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(rightClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
-
-		return 0;
-	}
-
-	if (uMsg == WM_LBUTTONUP && true == redirectLeftClick && true == actionCamControlled && false == overridingDisable)
-	{
-		KeyLParam key{};
-		key.TransitionState = true;
-		key.ExtendedFlag = (leftClickTarget.Key & 0xE000) != 0;
-		key.ScanCode = leftClickTarget.Key;
-
-		PostMessage(Game, WM_KEYUP, MapVirtualKeyA(leftClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
-
-		if (leftClickTarget.Alt)
-		{
-			PostMessage(Game, WM_SYSKEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, true));
-			Sleep(5);
-		}
-		if (leftClickTarget.Ctrl)
-		{
-			PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, false));
-			Sleep(5);
-		}
-		if (leftClickTarget.Shift)
-		{
-			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
-			Sleep(5);
-		}
-	}
-	if (uMsg == WM_RBUTTONUP && true == redirectRightClick && true == actionCamControlled && false == overridingDisable)
-	{
-		KeyLParam key{};
-		key.TransitionState = true;
-		key.ExtendedFlag = (rightClickTarget.Key & 0xE000) != 0;
-		key.ScanCode = rightClickTarget.Key;
-
-		PostMessage(Game, WM_KEYUP, MapVirtualKeyA(rightClickTarget.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
-
-		if (rightClickTarget.Alt)
-		{
-			PostMessage(Game, WM_SYSKEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, true));
-			Sleep(5);
-		}
-		if (rightClickTarget.Ctrl)
-		{
-			PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, false));
-			Sleep(5);
-		}
-		if (rightClickTarget.Shift)
-		{
-			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
-			Sleep(5);
+				if (rightClickTarget.Alt)
+				{
+					PostMessage(Game, WM_SYSKEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, true));
+					Sleep(5);
+				}
+				if (rightClickTarget.Ctrl)
+				{
+					PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, false));
+					Sleep(5);
+				}
+				if (rightClickTarget.Shift)
+				{
+					PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
+					Sleep(5);
+				}
+			}
 		}
 	}
 
@@ -456,6 +524,7 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		if (kb == overrideDisable)
 		{
 			overridingDisable = true;
+			SendDisableActionCam(false);
 			return 0;
 		}
 
@@ -502,103 +571,53 @@ void AddonRender()
 {
 	if (nullptr == NexusLink || nullptr == MumbleLink) { return; }
 
-	if ((true == NexusLink->IsMoving && false == wasMoving) ||
-		(true == enableInCombat && true == MumbleLink->Context.IsInCombat && false == wasInCombat) ||
-		(true == enableOnMount && Mumble::EMountIndex::None != MumbleLink->Context.MountIndex && false == wasMounted) ||
-		(true == actionCamControlled && false == overridingDisable && true == wasDisabling) || 
-		(false == MumbleLink->Context.IsMapOpen && true == wasMapOpen))
+	bool isMoving = NexusLink->IsMoving;
+	bool isInCombat = MumbleLink->Context.IsInCombat;
+	bool isMounted = Mumble::EMountIndex::None != MumbleLink->Context.MountIndex;
+	bool isMapOpen = MumbleLink->Context.IsMapOpen;
+	bool isGameFocused = MumbleLink->Context.IsGameFocused;
+
+	if (isMoving != wasMoving ||
+		isInCombat != wasInCombat ||
+		isMounted != wasMounted ||
+		isMapOpen != wasMapOpen ||
+		isGameFocused != wasGameFocused ||
+		overridingDisable != wasDisabling)
 	{
-		wasMoving = NexusLink->IsMoving;
-		wasInCombat = MumbleLink->Context.IsInCombat;
-		wasMounted = MumbleLink->Context.MountIndex != Mumble::EMountIndex::None;
-		wasDisabling = overridingDisable;
-		wasMapOpen = MumbleLink->Context.IsMapOpen;
+		bool shouldControlCamera = (isMoving || (enableInCombat && isInCombat) || (enableOnMount && isMounted)) && !isMapOpen && !overridingDisable;
 
-		if (wasMapOpen && (overridingDisable && !(wasMoving || wasInCombat || wasMounted)))
+		if (shouldControlCamera && !actionCamControlled)
 		{
-			// do not send if map is open
-			return;
+			SendDisableActionCam(true);
 		}
-
-		actionCamControlled = true;
-
-		if (disableActionCam == Keybind{} || disableActionCam.Key == 0) { return; }
-
-		if (disableActionCam.Alt)
+		else if (!shouldControlCamera && actionCamControlled)
 		{
-			PostMessage(Game, WM_SYSKEYDOWN, VK_MENU, GetLPARAM(VK_MENU, true, true));
-			Sleep(5);
-		}
-		if (disableActionCam.Ctrl)
-		{
-			PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, true, false));
-			Sleep(5);
-		}
-		if (disableActionCam.Shift)
-		{
-			PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, true, false));
-			Sleep(5);
-		}
-
-		KeyLParam key{};
-		key.TransitionState = false;
-		key.ExtendedFlag = (disableActionCam.Key & 0xE000) != 0;
-		key.ScanCode = disableActionCam.Key;
-
-		PostMessage(Game, WM_KEYDOWN, MapVirtualKeyA(disableActionCam.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
-	}
-	else if ((false == NexusLink->IsMoving && true == wasMoving) ||
-			(true == enableInCombat && false == MumbleLink->Context.IsInCombat && true == wasInCombat) ||
-			(true == enableOnMount && Mumble::EMountIndex::None == MumbleLink->Context.MountIndex && true == wasMounted) ||
-			(true == actionCamControlled && true == overridingDisable && false == wasDisabling) ||
-			(true == MumbleLink->Context.IsMapOpen && false == wasMapOpen))
-	{
-		wasMoving = NexusLink->IsMoving;
-		wasInCombat = MumbleLink->Context.IsInCombat;
-		wasMounted = MumbleLink->Context.MountIndex != Mumble::EMountIndex::None;
-		wasDisabling = overridingDisable;
-		wasMapOpen = MumbleLink->Context.IsMapOpen;
-
-		if (((wasMoving || wasInCombat || wasMounted) && !overridingDisable) && !wasMapOpen)
-		{
-			// still moving, etc do not send disable
-			return;
-		}
-
-		if (!overridingDisable)
-		{
-			actionCamControlled = false;
-		}
-
-		KeyLParam key{};
-		key.TransitionState = false;
-		key.ExtendedFlag = (disableActionCam.Key & 0xE000) != 0;
-		key.ScanCode = disableActionCam.Key;
-		key.TransitionState = true;
-		PostMessage(Game, WM_KEYUP, MapVirtualKeyA(disableActionCam.Key, MAPVK_VSC_TO_VK), KMFToLParam(key));
-
-		if (disableActionCam.Alt)
-		{
-			PostMessage(Game, WM_SYSKEYUP, VK_MENU, GetLPARAM(VK_MENU, false, true));
-			Sleep(5);
-		}
-		if (disableActionCam.Ctrl)
-		{
-			PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, false, false));
-			Sleep(5);
-		}
-		if (disableActionCam.Shift)
-		{
-			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, false, false));
+			SendDisableActionCam(false);
 		}
 	}
 
-	if (actionCamControlled && resetCursorToCenter && !overridingDisable && MumbleLink->Context.IsGameFocused && !MumbleLink->Context.IsMapOpen)
-	{
-		RECT rect{};
-		GetWindowRect(Game, &rect);
+	wasMoving = isMoving;
+	wasInCombat = isInCombat;
+	wasMounted = isMounted;
+	wasDisabling = overridingDisable;
+	wasMapOpen = isMapOpen;
+	wasGameFocused = isGameFocused;
 
-		SetCursorPos((rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2);
+	if (resetCursorToCenter)
+	{
+		if (actionCamControlled && !overridingDisable && isGameFocused && !isMapOpen)
+		{
+			RECT rect{};
+			GetWindowRect(Game, &rect);
+
+			SetCursorPos((rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2);
+		}
+	}
+
+	if (!isGameFocused)
+	{
+		overridingDisable = false;
+		actionCamControlled = false;
 	}
 }
 
