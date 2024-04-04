@@ -1,9 +1,12 @@
-[submodule "mumble"]
-	path = mumble
-	url = https://github.com/RaidcoreGG/RCGG-lib-mumble-api/
-[submodule "nexus"]
-	path = nexus
+[submodule "src/nexus"]
+	path = src/nexus
 	url = https://github.com/RaidcoreGG/RCGG-lib-nexus-api
-[submodule "imgui"]
-	path = imgui
-	url = https://github.com/ocornut/imgui/
+[submodule "src/mumble"]
+	path = src/mumble
+	url = https://github.com/RaidcoreGG/RCGG-lib-mumble-api/
+[submodule "src/imgui"]
+	path = src/imgui
+	url = https://github.com/RaidcoreGG/imgui
+[submodule "Scripts"]
+	path = Scripts
+	url = https://github.com/RaidcoreGG/RCGG-Scripts

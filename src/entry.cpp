@@ -7,6 +7,7 @@
 #include "mumble/Mumble.h"
 #include "imgui/imgui.h"
 
+#include "Remote.h"
 #include "Version.h"
 
 #include "nlohmann/json.hpp"
@@ -264,7 +265,7 @@ extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
 
 	/* not necessary if hosted on Raidcore, but shown anyway for the example also useful as a backup resource */
 	AddonDef.Provider = EUpdateProvider_GitHub;
-	AddonDef.UpdateLink = "https://github.com/RaidcoreGG/MouseLookHandler";
+	AddonDef.UpdateLink = REMOTE_URL;
 
 	return &AddonDef;
 }
@@ -272,7 +273,7 @@ extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
 void AddonLoad(AddonAPI* aApi)
 {
 	APIDefs = aApi;
-	ImGui::SetCurrentContext(APIDefs->ImguiContext);
+	ImGui::SetCurrentContext((ImGuiContext*)APIDefs->ImguiContext);
 	ImGui::SetAllocatorFunctions((void* (*)(size_t, void*))APIDefs->ImguiMalloc, (void(*)(void*, void*))APIDefs->ImguiFree); // on imgui 1.80+
 
 	MumbleLink = (Mumble::Data*)APIDefs->GetResource("DL_MUMBLE_LINK");
@@ -312,10 +313,10 @@ void AddonLoad(AddonAPI* aApi)
 }
 void AddonUnload()
 {
-	APIDefs->UnregisterWndProc(AddonWndProc);
+	APIDefs->DeregisterWndProc(AddonWndProc);
 
-	APIDefs->UnregisterRender(AddonOptions);
-	APIDefs->UnregisterRender(AddonRender);
+	APIDefs->DeregisterRender(AddonOptions);
+	APIDefs->DeregisterRender(AddonRender);
 
 	MumbleLink = nullptr;
 	NexusLink = nullptr;
@@ -791,8 +792,8 @@ void LoadSettings(std::filesystem::path aPath)
 		}
 		catch (json::parse_error& ex)
 		{
-			APIDefs->Log(ELogLevel_WARNING, "MouseLookHandler: Settings.json could not be parsed.");
-			APIDefs->Log(ELogLevel_WARNING, ex.what());
+			APIDefs->Log(ELogLevel_WARNING, "MouseLookHandler", "Settings.json could not be parsed.");
+			APIDefs->Log(ELogLevel_WARNING, "MouseLookHandler", ex.what());
 		}
 	}
 	Mutex.unlock();
