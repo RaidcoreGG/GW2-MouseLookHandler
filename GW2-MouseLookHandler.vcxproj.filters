@@ -76,7 +76,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="src\MouseLookHandler.rc">
+    <ResourceCompile Include="src\GW2-MouseLookHandler.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

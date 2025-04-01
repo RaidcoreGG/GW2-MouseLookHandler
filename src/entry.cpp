@@ -624,8 +624,6 @@ void AddonRender()
 
 void AddonOptions()
 {
-	ImGui::TextDisabled("MouseLookHandler");
-
 	ImGui::Text("Disable Action Cam:");
 	ImGui::SameLine();
 	if (ImGui::Button((KeybindToString(disableActionCam, true) + "##DisableActionCam").c_str()))

@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by MouseLookHandler.rc
+// Used by GW2-MouseLookHandler.rc
 
 // Next default values for new objects
 // 
