@@ -137,6 +137,7 @@ namespace Addon
 		{
 			switch (uMsg)
 			{
+				case WM_LBUTTONDBLCLK:
 				case WM_LBUTTONDOWN:
 				{
 					s_APIDefs->GameBinds.Press(Config::RedirectLMB_Target);
@@ -156,6 +157,7 @@ namespace Addon
 		{
 			switch (uMsg)
 			{
+				case WM_RBUTTONDBLCLK:
 				case WM_RBUTTONDOWN:
 				{
 					s_APIDefs->GameBinds.Press(Config::RedirectRMB_Target);
