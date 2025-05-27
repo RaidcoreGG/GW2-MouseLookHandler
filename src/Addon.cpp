@@ -6,6 +6,8 @@
 /// Authors      :  K. Bieniek
 ///----------------------------------------------------------------------------------------------------
 
+#include "Addon.h"
+
 #include <windows.h>
 #include <mutex>
 #include <filesystem>
@@ -18,27 +20,12 @@
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
 
-#include "nexus/Nexus.h"
 #include "mumble/Mumble.h"
 #include "RTAPI/RTAPI.hpp"
 #include "Version.h"
 #include "Remote.h"
 #include "Util/src/Strings.h"
 #include "Util/src/Inputs.h"
-
-#define ADDON_NAME "MouseLookHandler"
-
-/* proto */
-namespace Addon
-{
-	void Load(AddonAPI* aApi);
-	void Unload();
-	UINT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-	void PreRender();
-	void RenderOptions();
-	void LoadSettings();
-	void SaveSettings();
-}
 
 extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
 {
@@ -96,13 +83,17 @@ namespace Addon
 		ImGui::SetCurrentContext((ImGuiContext*)s_APIDefs->ImguiContext);
 		ImGui::SetAllocatorFunctions((void* (*)(size_t, void*))s_APIDefs->ImguiMalloc, (void(*)(void*, void*))s_APIDefs->ImguiFree); // on imgui 1.80+
 
-		s_NexusLink = (NexusLinkData*)s_APIDefs->DataLink.Get("DL_NEXUS_LINK");
-		s_MumbleLink = (Mumble::Data*)s_APIDefs->DataLink.Get("DL_MUMBLE_LINK");
+		s_NexusLink  = (NexusLinkData*)      s_APIDefs->DataLink.Get("DL_NEXUS_LINK");
+		s_MumbleLink = (Mumble::Data*)       s_APIDefs->DataLink.Get("DL_MUMBLE_LINK");
+		s_RTAPI      = (RTAPI::RealTimeData*)s_APIDefs->DataLink.Get(DL_RTAPI);
 
 		s_APIDefs->Renderer.Register(ERenderType_PreRender, PreRender);
 		s_APIDefs->Renderer.Register(ERenderType_OptionsRender, RenderOptions);
 
 		s_APIDefs->WndProc.Register(WndProc);
+
+		s_APIDefs->Events.Subscribe("EV_ADDON_LOADED", (EVENT_CONSUME)OnAddonLoaded);
+		s_APIDefs->Events.Subscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME)OnAddonUnloaded);
 
 		IDXGISwapChain* swapchain = (IDXGISwapChain*)s_APIDefs->SwapChain;
 		DXGI_SWAP_CHAIN_DESC desc{};
@@ -114,10 +105,32 @@ namespace Addon
 
 	void Unload()
 	{
+		s_APIDefs->Events.Unsubscribe("EV_ADDON_LOADED", (EVENT_CONSUME)OnAddonLoaded);
+		s_APIDefs->Events.Unsubscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME)OnAddonUnloaded);
+
 		s_APIDefs->WndProc.Deregister(WndProc);
 
 		s_APIDefs->Renderer.Deregister(PreRender);
 		s_APIDefs->Renderer.Deregister(RenderOptions);
+	}
+
+	void OnAddonLoaded(int* aSignature)
+	{
+		if (!aSignature) { return; }
+
+		if (*aSignature == RTAPI_SIG)
+		{
+			s_RTAPI = (RTAPI::RealTimeData*)s_APIDefs->DataLink.Get(DL_RTAPI);
+		}
+	}
+	void OnAddonUnloaded(int* aSignature)
+	{
+		if (!aSignature) { return; }
+
+		if (*aSignature == RTAPI_SIG)
+		{
+			s_RTAPI = nullptr;
+		}
 	}
 
 	UINT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
