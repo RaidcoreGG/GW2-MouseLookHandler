@@ -13,66 +13,138 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="imgui">
+    <Filter Include="_EXTERNAL">
+      <UniqueIdentifier>{86159ce0-34a3-47fb-a592-5a392d87a730}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_EXTERNAL\imgui">
       <UniqueIdentifier>{47e214cd-bfb6-47a4-8158-99d0a768e696}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Util">
+      <UniqueIdentifier>{b88f662a-1e03-4273-8679-d06f56286f92}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\resource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\Remote.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui\imconfig.h">
-      <Filter>imgui</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui\imgui.h">
-      <Filter>imgui</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui\imgui_internal.h">
-      <Filter>imgui</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui\imstb_rectpack.h">
-      <Filter>imgui</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui\imstb_textedit.h">
-      <Filter>imgui</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui\imstb_truetype.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="src\mumble\Mumble.h">
-      <Filter>Header Files</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\nexus\Nexus.h">
-      <Filter>Header Files</Filter>
+      <Filter>_EXTERNAL</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mumble\Mumble.h">
+      <Filter>_EXTERNAL</Filter>
     </ClInclude>
     <ClInclude Include="src\nlohmann\json.hpp">
+      <Filter>_EXTERNAL</Filter>
+    </ClInclude>
+    <ClInclude Include="src\resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util\src\CmdLine.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util\src\DLL.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util\src\Enums.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util\src\Inputs.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util\src\Memory.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util\src\Paths.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util\src\Resources.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util\src\Strings.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util\src\Time.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util\src\Url.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util\src\Base64.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui_extensions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\entry.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\imgui\imgui.cpp">
-      <Filter>imgui</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\imgui\imgui_demo.cpp">
-      <Filter>imgui</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\imgui\imgui_draw.cpp">
-      <Filter>imgui</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\imgui\imgui_tables.cpp">
-      <Filter>imgui</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\imgui\imgui_widgets.cpp">
-      <Filter>imgui</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Util\src\CmdLine.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Util\src\DLL.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Util\src\Inputs.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Util\src\Memory.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Util\src\Paths.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Util\src\Resources.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Util\src\Strings.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Util\src\Time.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Util\src\Url.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Util\src\Base64.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Addon.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -82,7 +154,7 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="src\imgui\LICENSE.txt">
-      <Filter>imgui</Filter>
+      <Filter>_EXTERNAL\imgui</Filter>
     </Text>
   </ItemGroup>
 </Project>

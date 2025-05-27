@@ -10,3 +10,9 @@
 [submodule "Scripts"]
 	path = Scripts
 	url = https://github.com/RaidcoreGG/RCGG-Scripts
+[submodule "src/Util"]
+	path = src/Util
+	url = https://github.com/RaidcoreGG/RCGG-Utils
+[submodule "src/RTAPI"]
+	path = src/RTAPI
+	url = https://github.com/RaidcoreGG/GW2-RealTime-API-Releases
