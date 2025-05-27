@@ -179,6 +179,12 @@ namespace Addon
 		static bool s_WasActive = false;
 		static bool s_ResetCursor = false;
 
+		/* Do not evaluate state changes while map is open. */
+		if (s_MumbleLink->Context.IsMapOpen)
+		{
+			return;
+		}
+
 		bool shouldActivate = false;
 
 		if (s_ResetCursor && !Inputs::IsCursorHidden())
