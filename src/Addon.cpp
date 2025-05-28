@@ -73,7 +73,6 @@ namespace Addon
 
 	static NexusLinkData*       s_NexusLink    = nullptr;
 	static Mumble::Data*        s_MumbleLink   = nullptr;
-	static RTAPI::RealTimeData* s_RTAPI        = nullptr;
 
 	static HWND                 s_WindowHandle = nullptr;
 
@@ -85,15 +84,11 @@ namespace Addon
 
 		s_NexusLink  = (NexusLinkData*)      s_APIDefs->DataLink.Get("DL_NEXUS_LINK");
 		s_MumbleLink = (Mumble::Data*)       s_APIDefs->DataLink.Get("DL_MUMBLE_LINK");
-		s_RTAPI      = (RTAPI::RealTimeData*)s_APIDefs->DataLink.Get(DL_RTAPI);
 
 		s_APIDefs->Renderer.Register(ERenderType_PreRender, PreRender);
 		s_APIDefs->Renderer.Register(ERenderType_OptionsRender, RenderOptions);
 
 		s_APIDefs->WndProc.Register(WndProc);
-
-		s_APIDefs->Events.Subscribe("EV_ADDON_LOADED", (EVENT_CONSUME)OnAddonLoaded);
-		s_APIDefs->Events.Subscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME)OnAddonUnloaded);
 
 		IDXGISwapChain* swapchain = (IDXGISwapChain*)s_APIDefs->SwapChain;
 		DXGI_SWAP_CHAIN_DESC desc{};
@@ -105,32 +100,10 @@ namespace Addon
 
 	void Unload()
 	{
-		s_APIDefs->Events.Unsubscribe("EV_ADDON_LOADED", (EVENT_CONSUME)OnAddonLoaded);
-		s_APIDefs->Events.Unsubscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME)OnAddonUnloaded);
-
 		s_APIDefs->WndProc.Deregister(WndProc);
 
 		s_APIDefs->Renderer.Deregister(PreRender);
 		s_APIDefs->Renderer.Deregister(RenderOptions);
-	}
-
-	void OnAddonLoaded(int* aSignature)
-	{
-		if (!aSignature) { return; }
-
-		if (*aSignature == RTAPI_SIG)
-		{
-			s_RTAPI = (RTAPI::RealTimeData*)s_APIDefs->DataLink.Get(DL_RTAPI);
-		}
-	}
-	void OnAddonUnloaded(int* aSignature)
-	{
-		if (!aSignature) { return; }
-
-		if (*aSignature == RTAPI_SIG)
-		{
-			s_RTAPI = nullptr;
-		}
 	}
 
 	UINT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -138,10 +111,7 @@ namespace Addon
 		//                      ui is ticking           && cursor not visible
 		bool cursorControlled = s_NexusLink->IsGameplay && Inputs::IsCursorHidden();
 
-		//                      rtapi   && action cam is active    && during gameplay
-		bool rtapiActionCam   = s_RTAPI && s_RTAPI->IsActionCamera && s_RTAPI->GameState == RTAPI::EGameState::Gameplay;
-
-		if (!(cursorControlled || (rtapiActionCam)))
+		if (!cursorControlled)
 		{
 			return 1;
 		}
@@ -191,8 +161,8 @@ namespace Addon
 
 	void PreRender()
 	{
+		static bool s_CursorWasHidden = false;
 		static bool s_WasActive = false;
-		static bool s_ResetCursor = false;
 
 		/* Do not evaluate state changes while map is open. */
 		if (s_MumbleLink->Context.IsMapOpen)
@@ -202,13 +172,14 @@ namespace Addon
 
 		bool shouldActivate = false;
 
-		if (s_ResetCursor && !Inputs::IsCursorHidden())
+		if (Config::ResetToCenter && s_CursorWasHidden && !Inputs::IsCursorHidden())
 		{
 			RECT rect{};
 			GetWindowRect(s_WindowHandle, &rect);
 			SetCursorPos((rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2);
-			s_ResetCursor = false;
 		}
+
+		s_CursorWasHidden = Inputs::IsCursorHidden();
 
 		if (Config::EnableWhileMoving && s_NexusLink->IsMoving)
 		{
@@ -223,17 +194,45 @@ namespace Addon
 			shouldActivate = true;
 		}
 
-		if (shouldActivate != s_WasActive)
-		{
-			s_APIDefs->GameBinds.InvokeAsync(EGameBinds_CameraActionMode, 0);
+		//                      ui is ticking           && cursor not visible
+		bool cursorControlled = s_NexusLink->IsGameplay && Inputs::IsCursorHidden();
 
-			if (!shouldActivate && Config::ResetToCenter)
+		//  is active        && should be active
+		if (cursorControlled && shouldActivate)
+		{
+			/* nop */
+		}
+		//       not active        && should be active
+		else if (!cursorControlled && shouldActivate)
+		{
+			if (s_WasActive) // must be manual override
 			{
-				s_ResetCursor = true;
+				/* nop */
+			}
+			else
+			{
+				s_APIDefs->GameBinds.InvokeAsync(EGameBinds_CameraActionMode, 0);
+				s_WasActive = shouldActivate;
 			}
 		}
-
-		s_WasActive = shouldActivate;
+		//       is active        && should not be active
+		else if (cursorControlled && !shouldActivate)
+		{
+			if (s_WasActive)
+			{
+				s_APIDefs->GameBinds.InvokeAsync(EGameBinds_CameraActionMode, 0);
+				s_WasActive = shouldActivate;
+			}
+			else
+			{
+				/* not sure if this is reachable */
+			}
+		}
+		//       not active        && should not be active
+		else if (!cursorControlled && !shouldActivate)
+		{
+			/* nop */
+		}
 	}
 
 	void GbSelectable(EGameBinds* aTarget, const char* aLabel, EGameBinds aGameBind)
@@ -717,11 +716,6 @@ namespace Addon
 			ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "You can bind it from Keybinds -> Guild Wars 2. It should match your bind in game.");
 		}
 
-		if (!s_RTAPI)
-		{
-			ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "You can install RealTime API for more accurate action camera detection.");
-		}
-
 		ImGui::Text("UI/UX");
 		if (ImGui::Checkbox("Reset Cursor to Center after Action Cam", &Config::ResetToCenter))
 		{
@@ -745,14 +739,21 @@ namespace Addon
 		}
 
 		ImGui::Text("Redirect Input");
-		ImGui::Checkbox("Redirect Left-Click while action cam is active", &Config::RedirectLMB);
+		if (ImGui::Checkbox("Redirect Left-Click while action cam is active", &Config::RedirectLMB))
+		{
+
+			SaveSettings();
+		}
 		if (Config::RedirectLMB)
 		{
 			ImGui::Text("Left-Click Action:");
 			ImGui::SameLine();
 			GbSelector("##RedirectLMBTarget", &Config::RedirectLMB_Target);
 		}
-		ImGui::Checkbox("Redirect Right-Click while action cam is active", &Config::RedirectRMB);
+		if (ImGui::Checkbox("Redirect Right-Click while action cam is active", &Config::RedirectRMB))
+		{
+			SaveSettings();
+		}
 		if (Config::RedirectRMB)
 		{
 			ImGui::Text("Right-Click Action:");
