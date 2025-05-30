@@ -164,6 +164,12 @@ namespace Addon
 		static bool s_CursorWasHidden = false;
 		static bool s_WasActive = false;
 
+		/* Do not evaluate state changes while not in gameplay. */
+		if (!s_NexusLink->IsGameplay)
+		{
+			return;
+		}
+
 		/* Do not evaluate state changes while map is open. */
 		if (s_MumbleLink->Context.IsMapOpen)
 		{
