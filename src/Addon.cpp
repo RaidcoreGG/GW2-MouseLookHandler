@@ -178,7 +178,7 @@ namespace Addon
 
 		bool shouldActivate = false;
 
-		if (Config::ResetToCenter && s_CursorWasHidden && !Inputs::IsCursorHidden())
+		if (Config::ResetToCenter && s_CursorWasHidden && !Inputs::IsCursorHidden() && s_NexusLink->IsCameraMoving)
 		{
 			RECT rect{};
 			GetWindowRect(s_WindowHandle, &rect);
